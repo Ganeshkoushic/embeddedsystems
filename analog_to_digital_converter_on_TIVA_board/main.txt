@@ -1,0 +1,202 @@
+/**
+
+
+
+References used 
+
+// https://www.ti.com/seclit/ml/ssqu015/ssqu015.pdf
+// http://www.ti.com/lit/ds/symlink/tm4c123gh6pm.pdf
+
+
+**/
+
+#include<stdint.h>
+#include<stdbool.h>
+#include"inc/hw_memmap.h"
+#include"driverlib/gpio.h"      //headers
+#include"inc/hw_types.h"
+#include"driverlib/debug.h"
+#include"driverlib/sysctl.h"
+#include"driverlib/adc.h"
+
+void SETUPGPIO();
+void ADCPOT();    //all function used throughout lab
+void ADCPHOTO();
+void LEDOFF();
+void LED(int n);
+
+
+
+uint32_t ui32ADC0Value[1]; //Store adc value
+
+int main(void)
+{
+
+
+SysCtlClockSet(SYSCTL_SYSDIV_5|SYSCTL_USE_PLL|SYSCTL_OSC_MAIN|SYSCTL_XTAL_16MHZ); // SYSTEM CLOCK AT 40MHZ
+
+SETUPGPIO();
+ADCPOT();  // calling functions
+ADCPHOTO();
+
+
+int count = 10;
+int sumtotal = 0;
+int avgadc = 0;
+
+
+
+
+
+    while(1)
+{
+// CLEAR INTERRUPT FLAG FOR ADC0, SEQUENCER 1
+        ADCIntClear(ADC0_BASE, 1);
+// TRIGGER IS GIVEN FOR ADC 0 MODULE, SEQUENCER 1
+        ADCProcessorTrigger(ADC0_BASE, 1);    // CHANGE ADC BASE TO 1 TO TEST PHOTORESISTOR
+        // https://www.ti.com/seclit/ml/ssqu015/ssqu015.pdf
+        // http://www.ti.com/lit/ds/symlink/tm4c123gh6pm.pdf
+        // STORE THE CONVERTED VALUE FOR ALL DIFFERENT SAMPLING IN ARRAY
+        //ui32ADC0Value
+        ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
+
+
+        if(count < 10)
+                {
+                    sumtotal += ui32ADC0Value[0];
+                    count++;
+                }
+                else
+                {                                       //reused code from previous lab to average adc
+                    avgadc = sumtotal/10;
+                    count = 0;
+                    sumtotal = 0;
+                    LED(avgadc);
+                }
+}
+}
+
+void LED(int n)
+{
+    int avgadc;
+    avgadc = n;
+
+        if(avgadc > 0 && avgadc <= 341)//LED0
+        {
+            LEDOFF();
+        }
+        else if(avgadc > 342 && avgadc <= 683)//LED0
+        {
+            LEDOFF();
+        }
+        else if(avgadc > 684 && avgadc <= 1026)//LED1
+        {
+            LEDOFF();
+            GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_5, GPIO_PIN_5);
+        }
+        else if(avgadc > 1027 && avgadc <= 1368)//LED2
+        {
+            LEDOFF();
+            GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_6, GPIO_PIN_6);
+        }
+        else if(avgadc > 1369 && avgadc <= 1710)//LED3
+        {
+            LEDOFF();
+            GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_7, GPIO_PIN_7);
+        }
+        else if(avgadc > 1711 && avgadc <= 2052)//LED4
+        {
+            LEDOFF();
+            GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_2, GPIO_PIN_2);
+        }
+        else if(avgadc > 2053 && avgadc <= 2394)//LED5
+        {
+            LEDOFF();
+            GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_3, GPIO_PIN_3);
+        }
+        else if(avgadc > 2395 && avgadc <= 2736)//LED6
+        {
+            LEDOFF();
+            GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_4, GPIO_PIN_4);
+        }
+        else if(avgadc > 2737 && avgadc <= 3078)//LED7
+        {
+            LEDOFF();
+            GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_2, GPIO_PIN_2);
+        }
+        else if(avgadc > 3079 && avgadc <= 3420)//LED8
+        {
+            LEDOFF();
+            GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_0, GPIO_PIN_0);
+        }
+        else if(avgadc > 3421 && avgadc <= 3762)//LED9
+        {
+            LEDOFF();
+            GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_5, GPIO_PIN_5);
+        }
+        else if(avgadc > 3763 && avgadc <= 4095)//LED10
+        {
+            LEDOFF();
+            GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_4,GPIO_PIN_4);
+        }
+}
+
+void ADCPOT() //Function to enable potentiometer
+{
+ SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0); // ENABLE ADC0 MODULE
+ SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB); // ENABLE GPIOB for ADC0
+
+ GPIOPinTypeADC(GPIO_PORTB_BASE,GPIO_PIN_5);// ENABLE AN0 OF ADC0 MODULE
+// ADC0 MODULE, TRIGGER IS PROCESSOR EVENT, SEQUENCER 0 IS CONFIGURED
+ // https://www.ti.com/seclit/ml/ssqu015/ssqu015.pdf REFERENCE USED
+ // http://www.ti.com/lit/ds/symlink/tm4c123gh6pm.pdf
+ ADCSequenceConfigure(ADC0_BASE, 1, ADC_TRIGGER_PROCESSOR, 0);
+// ADC0 MODULE, SEQUENCER 0 , FOR 1 SAMPLING, INPUT IS FROM CHANNEL 0 PE3
+ ADCSequenceStepConfigure(ADC0_BASE, 1, 0, ADC_CTL_CH11); // different channel for potentiometer so use channel 11
+// ENABLE THE SEQUENCE 1 FOR ADC0
+ ADCSequenceEnable(ADC0_BASE, 1);
+}
+
+void ADCPHOTO() //Function to enable photoresistor
+{
+SysCtlClockSet(SYSCTL_SYSDIV_5|SYSCTL_USE_PLL|SYSCTL_OSC_MAIN|SYSCTL_XTAL_16MHZ); // SYSTEM CLOCK AT 40MHZ
+ SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1); // ENABLE ADC0 MODULE
+ SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB); // ENABLE GPIOB for ADC0
+ // https://www.ti.com/seclit/ml/ssqu015/ssqu015.pdf REFERENCE USED
+ // http://www.ti.com/lit/ds/symlink/tm4c123gh6pm.pdf
+
+ GPIOPinTypeADC(GPIO_PORTE_BASE,GPIO_PIN_0);// ENABLE AN0 OF ADC0 MODULE
+// ADC0 MODULE, TRIGGER IS PROCESSOR EVENT, SEQUENCER 0 IS CONFIGURED
+ ADCSequenceConfigure(ADC1_BASE, 1, ADC_TRIGGER_PROCESSOR, 0);
+// ADC0 MODULE, SEQUENCER 0 , FOR 1 SAMPLING, INPUT IS FROM CHANNEL 0 PE3
+ ADCSequenceStepConfigure(ADC1_BASE, 1, 0, ADC_CTL_CH7); // different channel for photoresistor so use channel 7
+// ENABLE THE SEQUENCE 1 FOR ADC0
+ ADCSequenceEnable(ADC1_BASE, 1);
+}
+
+
+
+
+void LEDOFF() //Function to turn off LED
+{
+    GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4, 0x00);
+    GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_4, 0x00);
+    GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_0, 0x00);
+    GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_6, 0x00);
+    GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_7, 0x00);
+    GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_2, 0x00);
+    GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_0, 0x00);
+    GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_4, 0x00);
+    GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_3, 0x00);
+    GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_2, 0x00);
+}
+
+void SETUPGPIO() //Enabling all ports
+{
+SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
+GPIOPinTypeGPIOOutput(GPIO_PORTA_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|(GPIO_PIN_6)|GPIO_PIN_7);
+GPIOPinTypeGPIOOutput(GPIO_PORTB_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|(GPIO_PIN_6)|GPIO_PIN_7);
+GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|(GPIO_PIN_6)|GPIO_PIN_7);
+}
