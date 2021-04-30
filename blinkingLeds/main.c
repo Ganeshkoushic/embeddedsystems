@@ -1,6 +1,6 @@
 #include <msp430.h> 
 
-
+//I am adding a new line here
 /**
  * main.c
  */
